@@ -67,6 +67,30 @@ class Store:
                 );
                 """)
 
+                # 创建索引，优化搜索性能
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_books_title ON books (title);
+                """)
+
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_books_tags ON books (tags);
+                """)
+
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_books_author ON books (author);
+                """)
+
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_books_content ON books (content);
+                """)
+
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_books_store_id ON books (store_id);
+                """)
+
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders (user_id);
+                """)
                 
 
                 self.conn.commit()
