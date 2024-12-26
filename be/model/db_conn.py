@@ -1,37 +1,47 @@
 from be.model import store
 
-
 class DBConn:
     def __init__(self):
-        self.conn = store.get_db_conn()  #获取数据库连接对象
+        # 获取数据库连接
+        self.conn = store.get_db_conn().conn
 
     def user_id_exist(self, user_id):
-        cursor = self.conn.execute(
-            "SELECT user_id FROM user WHERE user_id = ?;", (user_id,)
-        )
-        row = cursor.fetchone()
-        if row is None:
-            return False
-        else:
-            return True
+        # 检查用户 ID 是否存在
+        try:
+            with self.conn.cursor() as cursor:
+                cursor.execute("""
+                SELECT 1 FROM users WHERE user_id = %s;
+                """, (user_id,))
+                result = cursor.fetchone()
+                return result is not None
+        except Exception as e:
+            self.conn.rollback()
+            raise e
 
     def book_id_exist(self, store_id, book_id):
-        cursor = self.conn.execute(
-            "SELECT book_id FROM store WHERE store_id = ? AND book_id = ?;",
-            (store_id, book_id),
-        )
-        row = cursor.fetchone()
-        if row is None:
-            return False
-        else:
-            return True
+        # 检查书籍 ID 是否存在于某个商店
+        try:
+            with self.conn.cursor() as cursor:
+                cursor.execute("""
+                SELECT 1 FROM books b
+                JOIN stores s ON s.store_id = %s
+                WHERE b.book_id = %s;
+                """, (store_id, book_id))
+                result = cursor.fetchone()
+                return result is not None
+        except Exception as e:
+            self.conn.rollback()
+            raise e
 
     def store_id_exist(self, store_id):
-        cursor = self.conn.execute(
-            "SELECT store_id FROM user_store WHERE store_id = ?;", (store_id,)
-        )
-        row = cursor.fetchone()
-        if row is None:
-            return False
-        else:
-            return True
+        # 检查商店 ID 是否存在
+        try:
+            with self.conn.cursor() as cursor:
+                cursor.execute("""
+                SELECT 1 FROM stores WHERE store_id = %s;
+                """, (store_id,))
+                result = cursor.fetchone()
+                return result is not None
+        except Exception as e:
+            self.conn.rollback()
+            raise e

@@ -6,7 +6,6 @@ from be.model import user
 bp_auth = Blueprint("auth", __name__, url_prefix="/auth")
 
 
-#登录
 @bp_auth.route("/login", methods=["POST"])
 def login():
     user_id = request.json.get("user_id", "")
@@ -19,7 +18,6 @@ def login():
     return jsonify({"message": message, "token": token}), code
 
 
-#登出
 @bp_auth.route("/logout", methods=["POST"])
 def logout():
     user_id: str = request.json.get("user_id")
@@ -29,7 +27,6 @@ def logout():
     return jsonify({"message": message}), code
 
 
-#注册
 @bp_auth.route("/register", methods=["POST"])
 def register():
     user_id = request.json.get("user_id", "")
@@ -39,7 +36,6 @@ def register():
     return jsonify({"message": message}), code
 
 
-#注销
 @bp_auth.route("/unregister", methods=["POST"])
 def unregister():
     user_id = request.json.get("user_id", "")
@@ -59,3 +55,4 @@ def change_password():
         user_id=user_id, old_password=old_password, new_password=new_password
     )
     return jsonify({"message": message}), code
+

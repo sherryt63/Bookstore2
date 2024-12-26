@@ -1,66 +1,170 @@
-import logging
-import os
-import sqlite3 as sqlite
-import threading
-
+import psycopg2
+from psycopg2.extras import DictCursor
 
 class Store:
-    database: str
-
-    def __init__(self, db_path):
-        self.database = os.path.join(db_path, "be.db")
+    def __init__(self, db_url):
+        # 解析 db_url，连接到 PostgreSQL中的bookstore数据库
+        self.conn = psycopg2.connect(db_url)
         self.init_tables()
 
     def init_tables(self):
+        # 初始化 PostgreSQL 中的表
         try:
-            conn = self.get_db_conn()
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS user ("
-                "user_id TEXT PRIMARY KEY, password TEXT NOT NULL, "
-                "balance INTEGER NOT NULL, token TEXT, terminal TEXT);"
-            )
+            with self.conn.cursor() as cursor:
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id VARCHAR(255) PRIMARY KEY,
+                    password VARCHAR(255) NOT NULL,
+                    balance NUMERIC DEFAULT 0,
+                    token VARCHAR(512),
+                    terminal VARCHAR(255)
+                );
+                """)
 
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS user_store("
-                "user_id TEXT, store_id, PRIMARY KEY(user_id, store_id));"
-            )
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS stores (
+                    store_id VARCHAR(255) PRIMARY KEY,
+                    store_name VARCHAR(255) UNIQUE NOT NULL,
+                    user_id VARCHAR(255) REFERENCES users(user_id)   
+                );
+                """)
 
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS store( "
-                "store_id TEXT, book_id TEXT, book_info TEXT, stock_level INTEGER,"
-                " PRIMARY KEY(store_id, book_id))"
-            )
+                #新添加stock_level和price和details
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS books (
+                    book_id SERIAL PRIMARY KEY,
+                    store_id VARCHAR(255) REFERENCES stores(store_id),
+                    title VARCHAR(255),
+                    tags TEXT,
+                    book_intro TEXT,
+                    content TEXT,
+                    author VARCHAR(255),
+                    stock_level INT DEFAULT 0 CHECK (stock_level >= 0),
+                    price NUMERIC NOT NULL,
+                    details JSONB
+                );
+                """)
 
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS new_order( "
-                "order_id TEXT PRIMARY KEY, user_id TEXT, store_id TEXT)"
-            )
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS orders (
+                    order_id SERIAL PRIMARY KEY,
+                    store_id VARCHAR(255) REFERENCES stores(store_id),
+                    user_id VARCHAR(255) REFERENCES users(user_id),
+                    book_id INT REFERENCES books(book_id),
+                    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    price NUMERIC NOT NULL,
+                    status INT DEFAULT 0
+                );
+                """)
 
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS new_order_detail( "
-                "order_id TEXT, book_id TEXT, count INTEGER, price INTEGER,  "
-                "PRIMARY KEY(order_id, book_id))"
-            )
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS order_details (
+                    order_detail_id SERIAL PRIMARY KEY,
+                    order_id INT REFERENCES orders(order_id),
+                    book_id INT REFERENCES books(book_id),
+                    count INT NOT NULL,
+                    price NUMERIC NOT NULL
+                );
+                """)
 
-            conn.commit()
-        except sqlite.Error as e:
-            logging.error(e)
-            conn.rollback()
+                # 创建索引，优化搜索性能
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_books_title ON books (title);
+                """)
 
-    def get_db_conn(self) -> sqlite.Connection:
-        return sqlite.connect(self.database)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_books_tags ON books (tags);
+                """)
+
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_books_author ON books (author);
+                """)
+
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_books_content ON books (content);
+                """)
+
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_books_store_id ON books (store_id);
+                """)
+
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders (user_id);
+                """)
+
+                self.conn.commit()
+        except Exception as e:
+            self.conn.rollback()
+            raise e
+
+    def insert_user(self, username, password):
+        # 插入用户数据
+        try:
+            with self.conn.cursor() as cursor:
+                cursor.execute("""
+                INSERT INTO users (username, password)
+                VALUES (%s, %s)
+                RETURNING user_id;
+                """, (username, password))
+                self.conn.commit()
+                return cursor.fetchone()[0]
+        except Exception as e:
+            self.conn.rollback()
+            raise e
+
+    def insert_store(self, store_name):
+        # 插入店铺数据
+        try:
+            with self.conn.cursor() as cursor:
+                cursor.execute("""
+                INSERT INTO stores (store_name)
+                VALUES (%s)
+                RETURNING store_id;
+                """, (store_name,))
+                self.conn.commit()
+                return cursor.fetchone()[0]
+        except Exception as e:
+            self.conn.rollback()
+            raise e
+
+    def insert_book(self, title, tags, book_intro, content):
+        # 插入图书数据
+        try:
+            with self.conn.cursor() as cursor:
+                cursor.execute("""
+                INSERT INTO books (title, tags, book_intro, content)
+                VALUES (%s, %s, %s, %s)
+                RETURNING book_id;
+                """, (title, tags, book_intro, content))
+                self.conn.commit()
+                return cursor.fetchone()[0]
+        except Exception as e:
+            self.conn.rollback()
+            raise e
+
+    def get_user_by_id(self, user_id):
+        # 查询用户数据
+        try:
+            with self.conn.cursor(cursor_factory=DictCursor) as cursor:
+                cursor.execute("""
+                SELECT * FROM users WHERE user_id = %s;
+                """, (user_id,))
+                return cursor.fetchone()
+        except Exception as e:
+            raise e
+
+    def close(self):
+        # 关闭数据库连接
+        self.conn.close()
 
 
-database_instance: Store = None
-# global variable for database sync
-init_completed_event = threading.Event()
-
-
-def init_database(db_path):
+# 初始化数据库连接
+def init_database(db_url):
     global database_instance
-    database_instance = Store(db_path)
-
+    database_instance = Store(db_url)
 
 def get_db_conn():
-    global database_instance                 #作用是存储一个全局的数据库管理实例
-    return database_instance.get_db_conn()   #通过调用get_db_conn() 方法，返回一个数据库连接。
+    global database_instance
+    db_url = "postgresql://Sherrytxy:newpassword@localhost:5432/bookstore"    #改成PostgreSQL数据库
+    database_instance = Store(db_url)
+    return database_instance

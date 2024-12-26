@@ -114,27 +114,40 @@ class Scraper:
 
     def create_tables(self):
         conn = sqlite3.connect(self.database)
-        try:
-            conn.execute("CREATE TABLE tags (tag TEXT PRIMARY KEY)")
-            conn.commit()
-        except sqlite3.Error as e:
-            logging.error(str(e))
-            conn.rollback()
+        cursor = conn.cursor()
+        
+        # 检查表tags是否存在
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='tags';")
+        if not cursor.fetchone():
+            try:
+                conn.execute("CREATE TABLE tags (tag TEXT PRIMARY KEY)")
+                conn.commit()
+                print("测试")
+            except sqlite3.Error as e:
+                logging.error(str(e))
+                conn.rollback()
+        else:
+            print("表 'tags' 已存在")
 
-        try:
-            conn.execute(
-                "CREATE TABLE book ("
-                "id TEXT PRIMARY KEY, title TEXT, author TEXT, "
-                "publisher TEXT, original_title TEXT, "
-                "translator TEXT, pub_year TEXT, pages INTEGER, "
-                "price INTEGER, currency_unit TEXT, binding TEXT, "
-                "isbn TEXT, author_intro TEXT, book_intro text, "
-                "content TEXT, tags TEXT, picture BLOB)"
-            )
-            conn.commit()
-        except sqlite3.Error as e:
-            logging.error(str(e))
-            conn.rollback()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='book';")
+        if not cursor.fetchone():
+            try:
+                conn.execute(
+                    "CREATE TABLE book ("
+                    "id TEXT PRIMARY KEY, title TEXT, author TEXT, "
+                    "publisher TEXT, original_title TEXT, "
+                    "translator TEXT, pub_year TEXT, pages INTEGER, "
+                    "price INTEGER, currency_unit TEXT, binding TEXT, "
+                    "isbn TEXT, author_intro TEXT, book_intro text, "
+                    "content TEXT, tags TEXT, picture BLOB)"
+                )
+                conn.commit()
+                print("测试2")
+            except sqlite3.Error as e:
+                logging.error(str(e))
+                conn.rollback()
+        else:
+            print("表 'book' 已存在")
 
         try:
             conn.execute(

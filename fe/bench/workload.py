@@ -33,7 +33,7 @@ class Payment:
 class Workload:
     def __init__(self):
         self.uuid = str(uuid.uuid1())
-        self.book_ids = {}
+        self.book_ids = []
         self.buyer_ids = []
         self.store_ids = []
         self.book_db = book.BookDB(conf.Use_Large_DB)
@@ -85,9 +85,8 @@ class Workload:
             for j in range(1, self.store_num_per_user + 1):
                 store_id = self.to_store_id(i, j)
                 code = seller.create_store(store_id)
-                assert code == 200
+                assert code == 200, f"create store error: {code}"
                 self.store_ids.append(store_id)
-                self.book_ids[store_id] = []
                 row_no = 0
 
                 while row_no < self.book_num_per_store:
@@ -96,8 +95,9 @@ class Workload:
                         break
                     for bk in books:
                         code = seller.add_book(store_id, self.stock_level, bk)
-                        assert code == 200
-                        self.book_ids[store_id].append(bk.id)
+                        assert code == 200, f"add book error: {code}"
+                        if i == 1 and j == 1:
+                            self.book_ids.append(bk.id)
                     row_no = row_no + len(books)
         logging.info("seller data loaded.")
         for k in range(1, self.buyer_num + 1):
@@ -116,8 +116,8 @@ class Workload:
         book_id_and_count = []
         book_temp = []
         for i in range(0, books):
-            book_no = int(random.uniform(0, len(self.book_ids[store_id]) - 1))
-            book_id = self.book_ids[store_id][book_no]
+            book_no = int(random.uniform(0, len(self.book_ids) - 1))
+            book_id = self.book_ids[book_no]
             if book_id in book_temp:
                 continue
             else:

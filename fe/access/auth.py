@@ -1,7 +1,6 @@
 import requests
 from urllib.parse import urljoin
 
-
 class Auth:
     def __init__(self, url_prefix):
         self.url_prefix = urljoin(url_prefix, "auth/")
@@ -13,6 +12,12 @@ class Auth:
         return r.status_code, r.json().get("token")
 
     def register(self, user_id: str, password: str) -> int:
+        """
+        send url
+        :param user_id:
+        :param password:
+        :return:
+        """
         json = {"user_id": user_id, "password": password}
         url = urljoin(self.url_prefix, "register")
         r = requests.post(url, json=json)

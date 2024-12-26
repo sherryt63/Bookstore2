@@ -39,7 +39,7 @@ class Session(threading.Thread):
                 self.new_order_ok = self.new_order_ok + 1
                 payment = Payment(new_order.buyer, order_id)
                 self.payment_request.append(payment)
-            if self.new_order_i % 100 ==0 or self.new_order_i == len(
+            if self.new_order_i % 100 or self.new_order_i == len(
                 self.new_order_request
             ):
                 self.workload.update_stat(

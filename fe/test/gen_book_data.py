@@ -24,7 +24,7 @@ class GenBook:
     ) -> (bool, []):
         self.__init_book_list__()
         ok = True
-        book_db = book.BookDB(conf.Use_Large_DB)
+        book_db = book.BookDB()
         rows = book_db.get_book_count()
         start = 0
         if rows > max_book_count:

@@ -7,7 +7,6 @@ import json
 bp_seller = Blueprint("seller", __name__, url_prefix="/seller")
 
 
-#创建店铺
 @bp_seller.route("/create_store", methods=["POST"])
 def seller_create_store():
     user_id: str = request.json.get("user_id")
@@ -17,7 +16,6 @@ def seller_create_store():
     return jsonify({"message": message}), code
 
 
-#添加书籍信息及描述
 @bp_seller.route("/add_book", methods=["POST"])
 def seller_add_book():
     user_id: str = request.json.get("user_id")
@@ -27,13 +25,12 @@ def seller_add_book():
 
     s = seller.Seller()
     code, message = s.add_book(
-        user_id, store_id, book_info.get("id"), json.dumps(book_info), stock_level
+        user_id, store_id, book_info["id"], json.dumps(book_info), stock_level
     )
 
     return jsonify({"message": message}), code
 
 
-#增加库存
 @bp_seller.route("/add_stock_level", methods=["POST"])
 def add_stock_level():
     user_id: str = request.json.get("user_id")
@@ -44,4 +41,12 @@ def add_stock_level():
     s = seller.Seller()
     code, message = s.add_stock_level(user_id, store_id, book_id, add_num)
 
+    return jsonify({"message": message}), code
+
+@bp_seller.route("/send_books", methods=["POST"])
+def send_books():
+    user_id: str = request.json.get("user_id")
+    order_id: str = request.json.get("order_id")
+    s = seller.Seller()
+    code, message = s.send_books(user_id, order_id)
     return jsonify({"message": message}), code

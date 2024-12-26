@@ -4,7 +4,6 @@ import random
 import base64
 import simplejson as json
 
-
 class Book:
     id: str
     title: str
@@ -15,7 +14,6 @@ class Book:
     pub_year: str
     pages: int
     price: int
-    currency_unit: str
     binding: str
     isbn: str
     author_intro: str
